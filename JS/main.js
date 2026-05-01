@@ -4,8 +4,17 @@ const searchInput = document.getElementById("search-input");
 const resultsContainer = document.getElementById("results-container");
 
 fetch("crawled_data.json")
-  .then(response => response.json())
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP Error: ${response.status}`);
+    }
+    return response.json();
+  })
   .then(data => {
+    // Validate data format
+    if (!data || (typeof data !== 'object')) {
+      throw new Error("Invalid data format: expected object or array");
+    }
     db1 = data;
     console.log("Loaded data:", db1);
 
@@ -19,8 +28,20 @@ fetch("crawled_data.json")
   })
   .catch(error => {
     console.error("Error loading crawled_data.json:", error);
-    resultsContainer.innerHTML = "<p>Error loading search data. Please check if crawled_data.json exists.</p>";
+    const errorMsg = document.createElement("p");
+    errorMsg.style.color = "red";
+    errorMsg.textContent = "Error loading search data. Please check if crawled_data.json exists or is valid JSON.";
+    resultsContainer.appendChild(errorMsg);
   });
+
+/**
+ * Escape HTML special characters to prevent XSS
+ */
+function escapeHTML(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+}
 
 /**
  * Search function that filters websites by keyword
@@ -61,18 +82,41 @@ function search(keyword) {
             metadata = `<small>Last updated: ${crawlDate}</small>`;
         }
 
-        card.innerHTML = `
-            <a href="https://${name}" target="_blank" class="website-link">${name}</a><br>
-            <span class="website-title">${title}</span>
-            ${metadata}
-        `;
+        // Build URL with protocol detection or default to https
+        const url = name.startsWith("http://") || name.startsWith("https://") 
+            ? name 
+            : `https://${name}`;
+
+        // Use textContent and createElement to safely build the card
+        const linkElement = document.createElement("a");
+        linkElement.href = url;
+        linkElement.target = "_blank";
+        linkElement.className = "website-link";
+        linkElement.textContent = escapeHTML(name);
+
+        const titleElement = document.createElement("span");
+        titleElement.className = "website-title";
+        titleElement.textContent = escapeHTML(title);
+
+        card.appendChild(linkElement);
+        card.appendChild(document.createElement("br"));
+        card.appendChild(titleElement);
+        
+        if (metadata) {
+            card.appendChild(document.createElement("br"));
+            const metaElement = document.createElement("small");
+            metaElement.textContent = `Last updated: ${new Date(website.last_crawled).toLocaleDateString()}`;
+            card.appendChild(metaElement);
+        }
 
         resultsContainer.appendChild(card);
     }
 
     // Show message if no results found
     if (resultCount === 0 && keyword) {
-        resultsContainer.innerHTML = `<p>No results found for "<strong>${keyword}</strong>"</p>`;
+        const noResultsMsg = document.createElement("p");
+        noResultsMsg.innerHTML = `No results found for "<strong>${escapeHTML(keyword)}</strong>"`;
+        resultsContainer.appendChild(noResultsMsg);
     } else if (resultCount === 0) {
         resultsContainer.innerHTML = "<p>No websites available.</p>";
     }
