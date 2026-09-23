@@ -10,7 +10,10 @@
 <body>
     <div class="search-bar">
         <h1>Nexora</h1>
-        <button id="theme-toggle">Change Theme</button>
+        <button id="theme-toggle" type="button" aria-label="Switch to turquoise theme" aria-pressed="false">
+            <span id="theme-icon" aria-hidden="true">🌙</span>
+            <span id="theme-label">Change Theme</span>
+        </button>
         <input type="text" id="search-input">
     </div>
 
